@@ -1,4 +1,4 @@
-import { querySplice, SamplesSearch } from "$lib/splice/api"
+import { querySplice, SamplesSearch, PresetsSearch } from "$lib/splice/api"
 import { descrambleSample } from "$lib/splice/descrambler"
 import type {
     AssetCategorySlug,
@@ -6,7 +6,9 @@ import type {
     ChordType,
     Key,
     SampleAsset,
+    PresetAsset,
     SamplesSearchResponse,
+    PresetsSearchResponse,
     SortOrder,
     TagSummaryEntry,
 } from "$lib/splice/types"
@@ -23,6 +25,13 @@ export const randomSeed = () =>
 export const dataStore = $state({
     sampleAssets: [] as SampleAsset[],
     descrambledSamples: new Map<string, string>(),
+    tags: [] as string[],
+    tag_summary: [] as TagSummaryEntry[],
+    total_records: 0,
+})
+
+export const presetStore = $state({
+    presetAssets: [] as PresetAsset[],
     tags: [] as string[],
     tag_summary: [] as TagSummaryEntry[],
     total_records: 0,
@@ -184,4 +193,57 @@ export function freeDescrambledSample(uuid: string) {
     console.info("⛓️‍💥 Freed descrambled sample")
 
     return true
+}
+
+export const presetQueryStore = $state({
+    query: "",
+    sort: "popularity" as AssetSortType,
+    random_seed: randomSeed(),
+    order: "DESC" as SortOrder,
+    page: 1,
+})
+
+let currentPresetQueryIdentity: string = ""
+
+export const fetchPresets = () => {
+    const identity = JSON.stringify({
+        query: presetQueryStore.query,
+        sort: presetQueryStore.sort,
+        order: presetQueryStore.order,
+        random_seed: presetQueryStore.random_seed,
+        tags: presetStore.tags,
+    })
+
+    loading.assets = true
+
+    querySplice(PresetsSearch, {
+        query: presetQueryStore.query || null,
+        sort: presetQueryStore.sort,
+        order: presetQueryStore.order,
+        random_seed: presetQueryStore.random_seed,
+        tags: presetStore.tags,
+        page: presetQueryStore.page,
+        limit: PER_PAGE,
+    })
+        .then((response) => {
+            const result = (response as PresetsSearchResponse).data.assetsSearch
+            if (identity === currentPresetQueryIdentity) {
+                presetStore.presetAssets.push(...result.items)
+                console.info("➕ Loaded more presets")
+            } else {
+                presetStore.presetAssets = result.items
+                currentPresetQueryIdentity = identity
+                presetQueryStore.page = 1
+                console.info("🔄️ Loaded new presets")
+            }
+            presetStore.total_records = result.response_metadata.records
+            presetStore.tag_summary = result.tag_summary
+            loading.assets = false
+            loading.fetchError = null
+        })
+        .catch((error: Error) => {
+            console.error("⚠️ Failed to fetch presets", error)
+            loading.fetchError = error
+            loading.assets = false
+        })
 }
