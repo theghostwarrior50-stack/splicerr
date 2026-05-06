@@ -1,4 +1,4 @@
-import type { SampleAsset } from "$lib/splice/types"
+import type { SampleAsset, PresetAsset } from "$lib/splice/types"
 import { join, sep } from "@tauri-apps/api/path"
 import { exists, create, mkdir } from "@tauri-apps/plugin-fs"
 import { getDescrambledSampleURL } from "./store.svelte"
@@ -149,3 +149,44 @@ export async function savePackImage(sampleAsset: SampleAsset) {
     }
 }
 
+const presetAssetPath = (presetAsset: PresetAsset) => {
+    const pack = presetAsset.parents?.items[0]
+    const packName = pack ? pack.name : "Unknown Pack"
+    const ext = presetAsset.files[0]?.name?.split(".").pop() ?? "preset"
+    const baseName = presetAsset.name.split("/").pop() ?? presetAsset.name
+    return sanitizePath(`${packName}/${baseName}.${ext}`)
+}
+
+export async function absolutePresetPath(presetAsset: PresetAsset) {
+    if (!config.samples_dir) throw new Error("❌ Samples Directory not set")
+    if (!isSamplesDirValid()) throw new Error("❌ Samples Directory invalid")
+    return await join(config.samples_dir, presetAssetPath(presetAsset))
+}
+
+export async function savePreset(presetAsset: PresetAsset): Promise<string> {
+    const absolutePath = await absolutePresetPath(presetAsset)
+
+    if (await exists(absolutePath)) {
+        console.log("🗃️ Preset already exists at", absolutePath)
+        return absolutePath
+    }
+
+    // Pick the first available file (the actual preset file)
+    const fileEntry = presetAsset.files[0]
+    if (!fileEntry?.url) throw new Error("❌ No downloadable file for preset")
+
+    const response = await fetch(fileEntry.url)
+    if (!response.ok) throw new Error(`❌ Failed to fetch preset: ${response.status}`)
+
+    const buffer = await response.arrayBuffer()
+
+    console.log("🎛️ Saving preset at", absolutePath)
+    await ensureFileDirectoryExists(absolutePath)
+
+    const file = await create(absolutePath)
+    await file.write(new Uint8Array(buffer))
+    await file.close()
+
+    console.log("🎉 Preset saved!")
+    return absolutePath
+}
