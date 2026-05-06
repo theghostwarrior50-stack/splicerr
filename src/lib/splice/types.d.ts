@@ -73,6 +73,48 @@ export type SampleAsset = {
     asset_category_slug: AssetCategorySlug
 }
 
+export type PresetAsset = {
+    asset_type_slug: AssetTypeSlug
+    uuid: string
+    name: string
+    tags: Array<AssetTag>
+    files: Array<AssetFile>
+    __typename: string
+    parents: {
+        items: Array<PackAsset>
+        __typename: string
+    }
+    asset_devices?: Array<{
+        uuid: string
+        device: {
+            name: string
+            uuid: string
+            minimum_device_version?: string
+            __typename: string
+        }
+        __typename: string
+    }>
+}
+
+export type PresetsSearchResponse = {
+    data: {
+        assetsSearch: {
+            items: Array<PresetAsset>
+            __typename: string
+            tag_summary: Array<TagSummaryEntry>
+            pagination_metadata: {
+                currentPage: number
+                totalPages: number
+                __typename: string
+            }
+            response_metadata: {
+                records: number
+                __typename: string
+            }
+        }
+    }
+}
+
 export type PackAsset = {
     permalink_slug: string
     permalink_base_url: string
