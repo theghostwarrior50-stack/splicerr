@@ -65,6 +65,112 @@ export const PacksByPermalink = {
     query: "query PackByPermalink($permalink: String!) {\n  pack: packAsset(permalink: $permalink) {\n    uuid\n    name\n    main_genre\n    description\n    permalink_slug\n    permalink_base_url\n    provider {\n      uuid\n      name\n      permalink_slug\n      __typename\n    }\n    files {\n      uuid\n      asset_file_type_slug\n      url\n      path\n      __typename\n    }\n    child_asset_counts {\n      type\n      count\n      __typename\n    }\n    companion_packs {\n      uuid\n      description\n      permalink_slug\n      files {\n        uuid\n        asset_file_type_slug\n        url\n        path\n        __typename\n      }\n      main_genre\n      provider {\n        uuid\n        name\n        permalink_slug\n        __typename\n      }\n      main_genre\n      name\n      __typename\n    }\n    story {\n      uuid\n      background_url\n      description\n      title\n      videos {\n        background_url\n        url\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}",
 }
 
+export const PresetsSearch = {
+    operationName: "PresetsSearch",
+    variables: {
+        order: "DESC",
+        sort: "popularity",
+        limit: 50,
+        page: 1,
+        tags: [],
+        random_seed: null,
+        query: null,
+    },
+    query: `query PresetsSearch($query: String, $order: SortOrder = DESC, $sort: AssetSortType = popularity, $random_seed: String, $tags: [ID], $limit: Int = 50, $page: Int = 1) {
+  assetsSearch(
+    filter: {legacy: true, published: true, asset_type_slug: preset, query: $query, tag_ids: $tags}
+    pagination: {page: $page, limit: $limit}
+    sort: {sort: $sort, order: $order, random_seed: $random_seed}
+  ) {
+    items {
+      ... on IAsset {
+        asset_type_slug
+        uuid
+        name
+        tags {
+          uuid
+          label
+          __typename
+        }
+        files {
+          uuid
+          name
+          hash
+          path
+          asset_file_type_slug
+          url
+          __typename
+        }
+        __typename
+      }
+      ... on IAssetChild {
+        parents(filter: {asset_type_slug: pack}) {
+          items {
+            ... on PackAsset {
+              permalink_slug
+              permalink_base_url
+              uuid
+              name
+              files {
+                uuid
+                path
+                asset_file_type_slug
+                url
+                __typename
+              }
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      ... on PresetAsset {
+        uuid
+        name
+        asset_devices {
+          uuid
+          device {
+            name
+            uuid
+            minimum_device_version
+            __typename
+          }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    tag_summary {
+      count
+      tag {
+        uuid
+        label
+        taxonomy {
+          uuid
+          name
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    pagination_metadata {
+      currentPage
+      totalPages
+      __typename
+    }
+    response_metadata {
+      records
+      __typename
+    }
+    __typename
+  }
+}`,
+}
+
 export const SoundsSearchAutocomplete = {
     operationName: "SoundsSearchAutocomplete",
     variables: { term: "" },
